@@ -17,6 +17,9 @@ class _FormFieldsState extends State<FormFields> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Add cards info'),
+      ),
       body: Container(
         padding: const EdgeInsets.all(16),
         child: Column(

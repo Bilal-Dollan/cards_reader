@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:personal_cards_reader/data/CRUD_operation.dart';
-import 'package:personal_cards_reader/pages/home_view.dart';
+import 'package:personal_cards_reader/data/crud_operation.dart';
+import 'package:personal_cards_reader/main.dart';
 
 class FormFields extends StatefulWidget {
   const FormFields({super.key});
@@ -60,14 +60,10 @@ class _FormFieldsState extends State<FormFields> {
               child: ElevatedButton(
                 onPressed: () {
                   setState(() {
-                    putData(
-                        name: _nameController.text,
-                        companyName: _companyController.text,
-                        phoneNumber: _phoneController.text);
                     Navigator.pop(context);
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (context) => const Home(),
+                        builder: (context) => const Main(),
                       ),
                     );
                   });

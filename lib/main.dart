@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/adapters.dart';
-import 'package:personal_cards_reader/local_database/boxes.dart';
-import 'package:personal_cards_reader/local_database/cards.dart';
+
 import 'package:personal_cards_reader/pages/add_card_manualy_view.dart';
 import 'package:personal_cards_reader/pages/home_view.dart';
 
 void main() async {
-  await Hive.initFlutter();
-  Hive.registerAdapter(CardsAdapter());
-  cardsBox = await Hive.openBox<Cards>('CardBox');
   runApp(const Main());
 }
 

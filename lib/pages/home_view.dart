@@ -14,12 +14,12 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
+    return const SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AddCard(),
-          const Padding(
+          AddCard(),
+          Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 0, 0),
             child: Text(
               'Saved Cards',

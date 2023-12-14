@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:personal_cards_reader/sevices/crud/crud_exceptions.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' show join;
@@ -50,46 +52,76 @@ class DatabaseCards {
 class CardsServices {
   Database? _db;
 
+  List<DatabaseCards> _cards = [];
+  final _cardsStreamController =
+      StreamController<List<DatabaseCards>>.broadcast();
+
+  Future<void> _cacheCards() async {
+    final allCards = await getAllCards();
+    _cards = allCards.toList();
+    _cardsStreamController.add(_cards);
+  }
+
   Future<DatabaseCards> updateCard({
     required DatabaseCards card,
     required String name,
     required String companyName,
     required phoneNumber,
   }) async {
+    await _ensureDbIsOpen();
     final db = _getDatabaseOrThrow();
-    final currentCard = await getCard(id: card.id);
-    final updatedCard = await db.update(cardsTable, {
+    await getCard(id: card.id);
+    final updateCount = await db.update(cardsTable, {
       nameColumn: name,
       companyNameColumn: companyName,
       phoneNumberColumn: phoneNumber,
     });
 
-    if (updatedCard == 0) {
+    if (updateCount == 0) {
       throw CouldNotUpdatecard();
+    } else {
+      final updatedCard = await getCard(id: card.id);
+      _cards.removeWhere((card) => card.id == updatedCard.id);
+      _cards.add(updatedCard);
+      _cardsStreamController.add(_cards);
+      return updatedCard;
     }
-    return currentCard;
   }
 
   Future<Iterable<DatabaseCards>> getAllCards() async {
+    await _ensureDbIsOpen();
     final db = _getDatabaseOrThrow();
     final cards = await db.query(cardsTable);
     return cards.map((cardsRow) => DatabaseCards.fromRow(cardsRow));
   }
 
-  Future<int> deleteCards() async {
+  Future<int> deleteallCards() async {
+    await _ensureDbIsOpen();
     final db = _getDatabaseOrThrow();
-    return await db.delete(cardsTable);
+    final deletedCard = await db.delete(cardsTable);
+    _cards = [];
+    _cardsStreamController.add(_cards);
+    return deletedCard;
   }
 
   Future<DatabaseCards> getCard({required int id}) async {
+    await _ensureDbIsOpen();
     final db = _getDatabaseOrThrow();
-    final results =
-        await db.query(cardsTable, limit: 1, where: 'id = ?', whereArgs: [id]);
+    final results = await db.query(
+      cardsTable,
+      limit: 1,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
 
     if (results.isEmpty) {
       throw CouldNotFindCard();
     } else {
-      return DatabaseCards.fromRow(results.first);
+      final result = DatabaseCards.fromRow(results.first);
+      _cards.removeWhere((card) => card.id == id);
+      _cards.add(result);
+      _cardsStreamController.add(_cards);
+      return result;
     }
   }
 
@@ -103,12 +135,16 @@ class CardsServices {
   }
 
   Future<void> deletCard({required int id}) async {
+    await _ensureDbIsOpen();
     final db = _getDatabaseOrThrow();
     final deletedCount =
         await db.delete(cardsTable, where: 'id = ?', whereArgs: [id]);
 
     if (deletedCount != 1) {
       throw CouldNotDeleteCard();
+    } else {
+      _cards.removeWhere((card) => card.id == id);
+      _cardsStreamController.add(_cards);
     }
   }
 
@@ -117,6 +153,7 @@ class CardsServices {
     required String companyName,
     required String phoneNumber,
   }) async {
+    await _ensureDbIsOpen();
     final db = _getDatabaseOrThrow();
     final results = await db.query(cardsTable,
         limit: 1,
@@ -132,11 +169,15 @@ class CardsServices {
       phoneNumberColumn: phoneNumber,
     });
 
-    return DatabaseCards(
+    final cardCreated = DatabaseCards(
         id: cardId,
         name: name,
         companyName: companyName,
         phoneNumber: phoneNumber);
+
+    _cards.add(cardCreated);
+    _cardsStreamController.add(_cards);
+    return cardCreated;
   }
 
   Future<void> close() async {
@@ -147,6 +188,12 @@ class CardsServices {
       await db.close();
       _db = null;
     }
+  }
+
+  Future<void> _ensureDbIsOpen() async {
+    try {
+      await open();
+    } on DataBaseAlreadyOpendExeption {}
   }
 
   Future<void> open() async {
@@ -160,6 +207,7 @@ class CardsServices {
       _db = db;
 
       await db.execute(createCardsTable);
+      await _cacheCards();
     } on MissingPlatformDirectoryException {
       UnableToGetDocumentPathException();
     }
